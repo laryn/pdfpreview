@@ -1,0 +1,129 @@
+<?php
+/**
+* Implementation of hook_field_formatter_info().
+*/
+
+function pdfpreview_field_formatter_info() {
+  $formatters = array(
+    'default' => array(
+      'label' => t('PDF Preview'),
+      'field types' => array('filefield'),
+      'description' => t('Displays an snapshot of the first page of the PDF'),
+    ),
+  );
+
+  if (module_exists('imagecache')) {
+    foreach (imagecache_presets() as $preset) {
+      $formatters[$preset['presetname'] .'][pdfpreview'] = array(
+        'label' => t('PDF Preview: @preset image', array('@preset' => $preset['presetname'])),
+        'field types' => array('filefield'),
+        'description' => t('Display an snapshot using imagecache preset @preset',array('@preset' => $preset['presetname'])),
+      );
+    }
+  }
+  return $formatters;
+}
+
+/**
+* Implementation of hook_theme().
+*
+* We declare our theme functions according to the array keys in  hook_field_formatter_info
+*/
+function pdfpreview_theme() {
+  $theme = array(
+    'pdfpreview_formatter_default' => array(
+      'function' => 'theme_pdfpreview_formatter',
+      'arguments' => array('element' => NULL),
+    ),
+  );
+
+  if (module_exists('imagecache')) {
+    foreach (imagecache_presets() as $preset) {
+      $theme['pdfpreview_formatter_'. $preset['presetname'] .'][pdfpreview'] = array(
+        'function' => 'theme_pdfpreview_formatter',
+        'arguments' => array('element' => NULL),
+      );
+    }
+  }
+  
+  return $theme;
+}
+
+/**
+* Theming functions for our formatters
+*/
+function theme_pdfpreview_formatter($element) {
+  $output = '';
+  $item=$element['#item'];
+  if ($item['filemime']!='application/pdf' or $item['list']!=1) return '';
+  $output_dir=file_directory_path()."/".variable_get('pdfpreview_pathtoimages','pdfpreview');
+  $output_filename=$output_dir . "/".  md5($item['fid']).".jpg";
+  if (!file_exists($output_dir)){
+    if (!mkdir($output_dir)){
+      drupal_set_message(t("Error creating directory @dir",array("%dir" => $output_directory)),'error');
+      watchdog("pdfpreview","Error creating directory @dir",array("%dir" => $output_directory),WATCHDOG_ERROR);
+      return '';
+    }
+    $message=t("The directory %dir has been created",array("%dir" => $output_directory));
+    watchdog("pdfpreview","The directory %dir has been created",array("%dir" => $output_directory));
+    drupal_set_message($message,'status');
+  }
+  elseif (!is_dir($output_dir)){
+    $message=t("The path %dir is not a directory",array("%dir"=>$output_directory));
+    watchdog("pdfpreview","The path %dir is not a directory",array("%dir"=>$output_directory),WATCHDOG_ERROR);
+    drupal_set_message($message,"error");
+    return '';
+  }
+  if (!file_exists($output_filename) && function_exists("_imageapi_imagemagick_convert_exec")){
+    _imageapi_imagemagick_convert_exec($item['filepath']."[0] $output_filename",$cmd_output,$cmd_errors);
+  }
+  $output="<img src=\"/$output_filename\" title=\"{$item['data']['description']}\" alt=\"{$item['data']['description']}\" />";
+  if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
+    if ($preset = imagecache_preset_by_name($namespace)) {
+      $output=theme('imagecache', $namespace, $output_filename, $item['data']['alt'], $item['data']['title']);
+    }
+  }
+  $description=(variable_get("pdfpreview_description",1))?"<span class=\"pdfpreview-description\">{$item['data']['description']}</span>":"";
+  drupal_add_css(drupal_get_path("module", "pdfpreview")."/pdfpreview.css","module");
+  return "<div class=\"pdfpreview\" id=\"pdfpreview-{$item['fid']}\">
+    <span class=\"image-wrapper\"><a href=\"/{$item['filepath']}\" title=\"{$item['data']['description']}\">
+    $output</a></span>$description</div>";
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function pdfpreview_menu(){
+  $items=array(
+      'admin/settings/pdfpreview' => array(
+          'title' => t('Configure PDF Preview'),
+          'description' => t('Configure PDF Preview settings'),
+          'access arguments' => array('administer content'),
+          'page callback' => 'drupal_get_form',
+          'page arguments' => array('pdfpreview_admin_settings'),
+          'type' => MENU_NORMAL_ITEM,
+      ),
+      );
+  return $items;
+}
+
+function pdfpreview_admin_settings(){
+  $form=array(
+      'pdfpreview_pathtoimages' => array (
+          '#type' => 'textfield',
+          '#title' => 'Images folder',
+          '#description' => 'Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>',
+          '#default_value' => variable_get('pdfpreview_pathtoimages','pdfpreview'),
+      ),
+      'pdfpreview_description' => array (
+          '#type' => 'checkbox',
+          '#title' => 'Description',
+          '#description' => 'Show file description beside image',
+          '#options' => array(0=>t("No"),1=>t("Yes")),
+          '#default_value' => variable_get("pdfpreview_description",1),
+      )
+  );
+
+  return system_settings_form($form);
+}
+?>
