@@ -1,0 +1,96 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PDFPreview\n"
+"POT-Creation-Date: 2011-05-18 16:10+0200\n"
+"PO-Revision-Date: \n"
+"Last-Translator: Juanjo Garcia <juanjo@digitalvalue.es>\n"
+"Language-Team:  <juanjo.gcia@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Spanish\n"
+"X-Poedit-Country: SPAIN\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: pdfpreview.module:15
+#: pdfpreview.info:0
+msgid "PDF Preview"
+msgstr "Previsualización de PDF"
+
+#: pdfpreview.module:17
+msgid "Displays an snapshot of the first page of the PDF"
+msgstr "Muestra una captura de la primera página del archivo PDF"
+
+#: pdfpreview.module:24
+msgid "PDF Preview: @preset image"
+msgstr "Previsualización de PDF: @preset imagen"
+
+#: pdfpreview.module:26
+msgid "Display an snapshot using imagecache preset @preset"
+msgstr "Muestra una captura utilizando la preconfiguración @preset de imagecache"
+
+#: pdfpreview.module:69;70
+msgid "Error creating directory @dir"
+msgstr "Error creando el directorio @dir"
+
+#: pdfpreview.module:73;74
+msgid "The directory %dir has been created"
+msgstr "El directorio %dir ha sido creado"
+
+#: pdfpreview.module:78;79
+msgid "The path %dir is not a directory"
+msgstr "La ruta %dir no es un directorio"
+
+#: pdfpreview.module:105
+msgid "Configure PDF Preview"
+msgstr "Confiugrar Previsualización de PDF"
+
+#: pdfpreview.module:106
+msgid "Configure PDF Preview settings"
+msgstr "Configure los ajuste de Previsualización de PDF"
+
+#: pdfpreview.module:124
+msgid "Images folder"
+msgstr "Directorio de imágenes"
+
+#: pdfpreview.module:125
+msgid "Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>"
+msgstr "Ruta, dentro del directorio de archivos, dónde se almacenarán las capturas. Por ejemplo <em>pdfpreview</em>"
+
+#: pdfpreview.module:130
+msgid "Description"
+msgstr "Descripción"
+
+#: pdfpreview.module:131
+msgid "Show file description beside image"
+msgstr "Mostrar la descripción del archivo junto a la imagen."
+
+#: pdfpreview.module:132
+msgid "No"
+msgstr "No"
+
+#: pdfpreview.module:132
+msgid "Yes"
+msgstr "Sí"
+
+#: pdfpreview.module:137
+msgid "HTML tag"
+msgstr "Etiqueta HTML"
+
+#: pdfpreview.module:138
+msgid "Select which kind of HTML element will be used to theme elements"
+msgstr "Seleccione el tipo de elemento HTML que se utilizará para mostrar los elementos."
+
+#: pdfpreview.module:70;74;79
+msgid "pdfpreview"
+msgstr "pdfpreview"
+
+#: pdfpreview.info:0
+msgid "Show a snapshot of the first page of pdf files attached to nodes"
+msgstr "Muestra una captura de la primera página de los archivos pdf anexados a los nodos"
+
+#: pdfpreview.info:0
+msgid "CCK"
+msgstr "CCK"
+
