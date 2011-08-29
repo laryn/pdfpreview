@@ -1,7 +1,7 @@
-;$Id$
 name = PDF Preview
 description = Show a snapshot of the first page of pdf files attached to nodes
 package = CCK
 core = 6.x
 dependencies[] = filefield
 dependencies[] = imageapi_imagemagick
+dependencies[] = imagecache

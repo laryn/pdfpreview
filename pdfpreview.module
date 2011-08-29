@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  * This module creates a formatter for CCK filefields that
