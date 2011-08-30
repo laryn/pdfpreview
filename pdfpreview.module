@@ -12,7 +12,7 @@
  */
 
 /**
- * Implements of hook_field_formatter_info().
+ * Implements hook_field_formatter_info().
  */
 
 function pdfpreview_field_formatter_info() {
@@ -26,7 +26,7 @@ function pdfpreview_field_formatter_info() {
 
   if (module_exists('imagecache')) {
     foreach (imagecache_presets() as $preset) {
-      $formatters[$preset['presetname'] .'][pdfpreview'] = array(
+      $formatters[$preset['presetname'] . '][pdfpreview'] = array(
         'label' => t('PDF Preview: @preset image', array('@preset' => $preset['presetname'])),
         'field types' => array('filefield'),
         'description' => t('Display an snapshot using imagecache preset @preset', array('@preset' => $preset['presetname'])),
@@ -37,7 +37,7 @@ function pdfpreview_field_formatter_info() {
 }
 
 /**
- * Implements of hook_theme().
+ * Implements hook_theme().
  *
  * We declare our theme functions according to the array keys in  hook_field_formatter_info
  */
@@ -51,7 +51,7 @@ function pdfpreview_theme() {
 
   if (module_exists('imagecache')) {
     foreach (imagecache_presets() as $preset) {
-      $theme['pdfpreview_formatter_'. $preset['presetname'] .'][pdfpreview'] = array(
+      $theme['pdfpreview_formatter_'. $preset['presetname'] . '][pdfpreview'] = array(
         'function' => 'theme_pdfpreview_formatter',
         'arguments' => array('element' => NULL),
       );
@@ -66,10 +66,10 @@ function pdfpreview_theme() {
  */
 function theme_pdfpreview_formatter($element) {
   $output = '';
-  $item=$element['#item'];
+  $item = $element['#item'];
   if ($item['filemime'] != 'application/pdf' or $item['list'] != 1) return '';
-  $output_dir = file_directory_path() ."/". variable_get('pdfpreview_pathtoimages', 'pdfpreview');
-  $output_filename = $output_dir . "/".  md5($item['fid']) .".jpg";
+  $output_dir = file_directory_path() . "/" . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
+  $output_filename = $output_dir . "/" .  md5($item['fid']) .".jpg";
   if (!file_exists($output_dir)) {
     if (!mkdir($output_dir)) {
       drupal_set_message(t("Error creating directory @dir", array("%dir" => $output_directory)), 'error');
@@ -103,10 +103,10 @@ function theme_pdfpreview_formatter($element) {
 }
 
 /**
- * Implements of hook_menu()
+ * Implements hook_menu()
  */
 function pdfpreview_menu() {
-  $items=array(
+  $items = array(
       'admin/settings/pdfpreview' => array(
           'title' => 'Configure PDF Preview',
           'description' => 'Configure PDF Preview settings',
@@ -124,7 +124,7 @@ function pdfpreview_menu() {
  * @return themed settings form
  */
 function pdfpreview_admin_settings() {
-  $form=array(
+  $form = array(
       'pdfpreview_pathtoimages' => array(
           '#type' => 'textfield',
           '#title' => t('Images folder'),
