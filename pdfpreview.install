@@ -1,15 +1,15 @@
 <?php
-/* @file
+
+/**
+ * @file
  * Install, update and uninstall functions for the pdfpreview module.
  */
 
 /**
- * Implements of hook uninstall
+ * Implements hook_uninstall().
  */
 function pdfpreview_uninstall() {
   variable_del('pdfpreview_pathtoimages');
   variable_del('pdfpreview_tag');
   variable_del('pdfpreview_description');
-  drupal_set_message(t("The @module has been uninstalled.", array("@module" => "PDF Preview")));
 }
-

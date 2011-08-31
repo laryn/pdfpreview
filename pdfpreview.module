@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * This module creates a formatter for CCK filefields that
@@ -14,7 +15,6 @@
 /**
  * Implements hook_field_formatter_info().
  */
-
 function pdfpreview_field_formatter_info() {
   $formatters = array(
     'default' => array(
@@ -39,7 +39,7 @@ function pdfpreview_field_formatter_info() {
 /**
  * Implements hook_theme().
  *
- * We declare our theme functions according to the array keys in  hook_field_formatter_info
+ * We declare our theme functions according to the array keys in hook_field_formatter_info
  */
 function pdfpreview_theme() {
   $theme = array(
@@ -68,34 +68,34 @@ function theme_pdfpreview_formatter($element) {
   $output = '';
   $item = $element['#item'];
   if ($item['filemime'] != 'application/pdf' or $item['list'] != 1) return '';
-  $output_dir = file_directory_path() . "/" . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
-  $output_filename = $output_dir . "/" .  md5($item['fid']) .".jpg";
+  $output_dir = file_directory_path() . '/' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
+  $output_filename = $output_dir . '/' . md5($item['fid']) .'.jpg';
   if (!file_exists($output_dir)) {
     if (!mkdir($output_dir)) {
-      drupal_set_message(t("Error creating directory @dir", array("%dir" => $output_directory)), 'error');
-      watchdog("pdfpreview", "Error creating directory @dir", array("%dir" => $output_directory), WATCHDOG_ERROR);
+      drupal_set_message(t('Error creating directory @dir', array('%dir' => $output_directory)), 'error');
+      watchdog('pdfpreview', 'Error creating directory @dir', array('%dir' => $output_directory), WATCHDOG_ERROR);
       return '';
     }
-    $message = t("The directory %dir has been created", array("%dir" => $output_directory));
-    watchdog("pdfpreview", "The directory %dir has been created", array("%dir" => $output_directory));
+    $message = t('The directory %dir has been created', array('%dir' => $output_directory));
+    watchdog('pdfpreview', 'The directory %dir has been created', array('%dir' => $output_directory));
     drupal_set_message($message, 'status');
   }
   elseif (!is_dir($output_dir)) {
-    $message = t("The path %dir is not a directory", array("%dir" => $output_directory));
-    watchdog("pdfpreview", "The path %dir is not a directory", array("%dir" => $output_directory), WATCHDOG_ERROR);
-    drupal_set_message($message, "error");
+    $message = t('The path %dir is not a directory', array('%dir' => $output_directory));
+    watchdog('pdfpreview', 'The path %dir is not a directory', array('%dir' => $output_directory), WATCHDOG_ERROR);
+    drupal_set_message($message, 'error');
     return '';
   }
-  if (!file_exists($output_filename) && function_exists("_imageapi_imagemagick_convert_exec")) {
+  if (!file_exists($output_filename) && function_exists('_imageapi_imagemagick_convert_exec')) {
     _imageapi_imagemagick_convert_exec($item['filepath'] ."[0] $output_filename", $cmd_output, $cmd_errors);
   }
-  $output = "<img src=\"/$output_filename\" title=\"{$item['data']['description']}\" alt=\"{$item['data']['description']}\" />";
+  $output = '<img src="/' . $output_filename . '" title="' . $item['data']['description'] . '" alt="' . $item['data']['description'] .'" />';
   if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
     if ($preset = imagecache_preset_by_name($namespace)) {
       $output = theme('imagecache', $namespace, $output_filename, $item['data']['alt'], $item['data']['title']);
     }
   }
-  $tag = variable_get("pdfpreview_tag", "span");
+  $tag = variable_get('pdfpreview_tag', 'span');
   $description = (variable_get("pdfpreview_description", 1))?"<$tag class=\"pdfpreview-description\">{$item['data']['description']}</$tag>" : "";
   return "<div class=\"pdfpreview\" id=\"pdfpreview-{$item['fid']}\">
     <$tag class=\"image-wrapper\"><a href=\"/{$item['filepath']}\" title=\"{$item['data']['description']}\">
@@ -135,15 +135,15 @@ function pdfpreview_admin_settings() {
           '#type' => 'checkbox',
           '#title' => t('Description'),
           '#description' => t('Show file description beside image'),
-          '#options' => array(0 => t("No"), 1 => t("Yes")),
-          '#default_value' => variable_get("pdfpreview_description", 1),
+          '#options' => array(0 => t('No'), 1 => t('Yes')),
+          '#default_value' => variable_get('pdfpreview_description', 1),
       ),
       'pdfpreview_tag' => array(
           '#type' => 'radios',
-          '#title' => t("HTML tag"),
+          '#title' => t('HTML tag'),
           '#description' => t('Select which kind of HTML element will be used to theme elements'),
-          '#options' => array("span" => "span", "div" => "div"),
-          '#default_value' => variable_get("pdfpreview_tag", 1),
+          '#options' => array('span' => 'span', 'div' => 'div'),
+          '#default_value' => variable_get('pdfpreview_tag', 1),
       ),
   );
 
