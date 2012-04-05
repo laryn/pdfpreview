@@ -89,7 +89,7 @@ function theme_pdfpreview_formatter($element) {
   if (!file_exists($output_filename) && function_exists('_imageapi_imagemagick_convert_exec')) {
     _imageapi_imagemagick_convert_exec($item['filepath'] ."[0] $output_filename", $cmd_output, $cmd_errors);
   }
-  $output = '<img src="/' . $output_filename . '" title="' . $item['data']['description'] . '" alt="' . $item['data']['description'] .'" />';
+  $output = '<img src="' . base_path() . $output_filename . '" title="' . $item['data']['description'] . '" alt="' . $item['data']['description'] .'" />';
   if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
     if ($preset = imagecache_preset_by_name($namespace)) {
       $output = theme('imagecache', $namespace, $output_filename, $item['data']['alt'], $item['data']['title']);
