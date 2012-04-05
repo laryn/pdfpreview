@@ -98,7 +98,7 @@ function theme_pdfpreview_formatter($element) {
   $tag = variable_get('pdfpreview_tag', 'span');
   $description = (variable_get("pdfpreview_description", 1))?"<$tag class=\"pdfpreview-description\">{$item['data']['description']}</$tag>" : "";
   return "<div class=\"pdfpreview\" id=\"pdfpreview-{$item['fid']}\">
-    <$tag class=\"image-wrapper\"><a href=\"/{$item['filepath']}\" title=\"{$item['data']['description']}\">
+    <$tag class=\"image-wrapper\"><a href=\"" . base_path() . "{$item['filepath']}\" title=\"{$item['data']['description']}\">
     $output</a></$tag>$description</div>";
 }
 
