@@ -12,4 +12,5 @@ function pdfpreview_uninstall() {
   variable_del('pdfpreview_pathtoimages');
   variable_del('pdfpreview_previewsize');
   variable_del('pdfpreview_quality');
+  variable_del('pdfpreview_filenames');
 }

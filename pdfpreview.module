@@ -12,6 +12,8 @@ define('PDFPREVIEW_DEFAULT_QUALITY', 75);
 define('PDFPREVIEW_DEFAULT_SIZE', '1024x1024');
 define('PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION', 0);
 define('PDFPREVIEW_DEFAULT_TAG', 'span');
+define('PDFPREVIEW_FILENAMES_MACHINE', 0);
+define('PDFPREVIEW_FILENAMES_HUMAN', 1);
 
 /**
  * Implements hook_field_formatter_info()
@@ -96,7 +98,6 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
     $display['type'] = 'file_default';
     $element = array_merge($element, file_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, array($item), $display));
   }
-
   return $element;
 }
 
@@ -134,6 +135,9 @@ function pdfpreview_theme() {
   return $theme;
 }
 
+function pdfpreview_file_delete($file){
+  file_unmanaged_delete(_pdfpreview_output_filename($file));
+}
 
 // ----- custom module functions ----- //
 
@@ -168,6 +172,13 @@ function pdfpreview_admin() {
           '#field_suffix' => '%',
           '#description' => t('Image extraction quality in percentage.'),
           '#default_value' => variable_get('pdfpreview_quality', PDFPREVIEW_DEFAULT_QUALITY),
+      ),
+      'pdfpreview_filenames' => array(
+        '#type' => 'radios',
+        '#options' => array(PDFPREVIEW_FILENAMES_MACHINE => t('Filename hash'), PDFPREVIEW_FILENAMES_HUMAN => t('From pdf filename')),
+        '#default_value' => variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE),
+        '#title' => t('Generated filenames'),
+        '#description' => t('This changes how filenames will be used on genereated previews. If you change this after some files were generated, you must delete them manually.'),
       ),
   );
 
@@ -229,8 +240,7 @@ function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
  */
 function _pdfpreview_create_preview($file) {
   if (!is_array($file)) $file = (array) $file;
-  $output_dir = file_default_scheme() . '://' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
-  $output_filename = $output_dir . '/' . md5('pdfpreview' . $file['fid']) . '.jpg';
+  $output_filename = _pdfpreview_output_filename($file);
   // Create preview image using ImageMagick
   if (!file_exists($output_filename) && function_exists('_imagemagick_convert')) {
     _pdfpreview_convert_first_page($file['uri'], $output_filename);
@@ -238,6 +248,25 @@ function _pdfpreview_create_preview($file) {
   return $output_filename;
 }
 
+/**
+ * Generates the filename for the preview
+ * @paream File $file
+ * @return Filename for the generated preview
+ */
+function _pdfpreview_output_filename($file) {
+  if (!is_object($file)) $file = (object) $file;
+  $output_dir = file_default_scheme() . '://' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
+  if (variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE) == PDFPREVIEW_FILENAMES_HUMAN) {
+    $filename = basename($file->filename, '.pdf');
+    if (module_exists('transliteration')) {
+      $filename = transliteration_clean_filename($filename);
+    }
+    return $output_dir . '/' . $file->fid . '-' .  $filename . '.jpg';
+  }
+  else {
+    return $output_dir . '/' . md5('pdfpreview' . $file->fid) . '.jpg';  
+  }
+}
 
 /**
  * Prepare the file system for PDF preview image creation
