@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * This module creates a formatter for CCK filefields that
@@ -12,9 +11,17 @@
  *
  */
 
+define('PDFPREVIEW_DEFAULT_QUALITY', 75);
+define('PDFPREVIEW_DEFAULT_SIZE', '1024x1024');
+define('PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION', 0);
+define('PDFPREVIEW_DEFAULT_TAG', 'span');
+define('PDFPREVIEW_FILENAMES_MACHINE', 0);
+define('PDFPREVIEW_FILENAMES_HUMAN', 1);
+
 /**
  * Implements hook_field_formatter_info().
  */
+
 function pdfpreview_field_formatter_info() {
   $formatters = array(
     'default' => array(
@@ -39,7 +46,7 @@ function pdfpreview_field_formatter_info() {
 /**
  * Implements hook_theme().
  *
- * We declare our theme functions according to the array keys in hook_field_formatter_info
+ * We declare our theme functions according to the array keys in  hook_field_formatter_info
  */
 function pdfpreview_theme() {
   $theme = array(
@@ -68,37 +75,19 @@ function theme_pdfpreview_formatter($element) {
   $output = '';
   $item = $element['#item'];
   if ($item['filemime'] != 'application/pdf' or $item['list'] != 1) return '';
-  $output_dir = file_directory_path() . '/' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
-  $output_filename = $output_dir . '/' . md5($item['fid']) .'.jpg';
-  if (!file_exists($output_dir)) {
-    if (!mkdir($output_dir)) {
-      drupal_set_message(t('Error creating directory @dir', array('%dir' => $output_directory)), 'error');
-      watchdog('pdfpreview', 'Error creating directory @dir', array('%dir' => $output_directory), WATCHDOG_ERROR);
-      return '';
-    }
-    $message = t('The directory %dir has been created', array('%dir' => $output_directory));
-    watchdog('pdfpreview', 'The directory %dir has been created', array('%dir' => $output_directory));
-    drupal_set_message($message, 'status');
-  }
-  elseif (!is_dir($output_dir)) {
-    $message = t('The path %dir is not a directory', array('%dir' => $output_directory));
-    watchdog('pdfpreview', 'The path %dir is not a directory', array('%dir' => $output_directory), WATCHDOG_ERROR);
-    drupal_set_message($message, 'error');
-    return '';
-  }
-  if (!file_exists($output_filename) && function_exists('_imageapi_imagemagick_convert_exec')) {
-    _imageapi_imagemagick_convert_exec($item['filepath'] ."[0] $output_filename", $cmd_output, $cmd_errors);
-  }
-  $output = '<img src="' . base_path() . $output_filename . '" title="' . $item['data']['description'] . '" alt="' . $item['data']['description'] .'" />';
+
+  $output_filename = _pdfpreview_create_preview($item);
+
+  $output = "<img src=\"/$output_filename\" title=\"{$item['data']['description']}\" alt=\"{$item['data']['description']}\" />";
   if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
     if ($preset = imagecache_preset_by_name($namespace)) {
       $output = theme('imagecache', $namespace, $output_filename, $item['data']['alt'], $item['data']['title']);
     }
   }
   $tag = variable_get('pdfpreview_tag', 'span');
-  $description = (variable_get("pdfpreview_description", 1))?"<$tag class=\"pdfpreview-description\">{$item['data']['description']}</$tag>" : "";
+  $description = (variable_get('pdfpreview_description', 1))?"<$tag class=\"pdfpreview-description\">{$item['data']['description']}</$tag>" : '';
   return "<div class=\"pdfpreview\" id=\"pdfpreview-{$item['fid']}\">
-    <$tag class=\"image-wrapper\"><a href=\"" . base_path() . "{$item['filepath']}\" title=\"{$item['data']['description']}\">
+    <$tag class=\"image-wrapper\"><a href=\"/{$item['filepath']}\" title=\"{$item['data']['description']}\">
     $output</a></$tag>$description</div>";
 }
 
@@ -125,27 +114,168 @@ function pdfpreview_menu() {
  */
 function pdfpreview_admin_settings() {
   $form = array(
-      'pdfpreview_pathtoimages' => array(
-          '#type' => 'textfield',
-          '#title' => t('Images folder'),
-          '#description' => t('Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>'),
-          '#default_value' => variable_get('pdfpreview_pathtoimages', 'pdfpreview'),
-      ),
-      'pdfpreview_description' => array(
-          '#type' => 'checkbox',
-          '#title' => t('Description'),
-          '#description' => t('Show file description beside image'),
-          '#options' => array(0 => t('No'), 1 => t('Yes')),
-          '#default_value' => variable_get('pdfpreview_description', 1),
-      ),
-      'pdfpreview_tag' => array(
-          '#type' => 'radios',
-          '#title' => t('HTML tag'),
-          '#description' => t('Select which kind of HTML element will be used to theme elements'),
-          '#options' => array('span' => 'span', 'div' => 'div'),
-          '#default_value' => variable_get('pdfpreview_tag', 1),
-      ),
-  );
+    'pdfpreview_pathtoimages' => array(
+        '#type' => 'textfield',
+        '#title' => t('Images folder'),
+        '#description' => t('Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>'),
+        '#default_value' => variable_get('pdfpreview_pathtoimages', 'pdfpreview'),
+    ),
+    'pdfpreview_previewsize' => array(
+        '#type' => 'textfield',
+        '#title' => t('Preview size'),
+        '#description' => t('Size of the preview in pixels. For example <em>100x100</em>. You must set this to a value big enought to apply your image styles.'),
+        '#default_value' => variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE),
+    ),
+    'pdfpreview_quality' => array(
+        '#type' => 'textfield',
+        '#size' => 3,
+        '#maxlenght' => 3,
+        '#title' => t('Image quality'),
+        '#field_suffix' => '%',
+        '#description' => t('Image extraction quality in percentage.'),
+        '#default_value' => variable_get('pdfpreview_quality', PDFPREVIEW_DEFAULT_QUALITY),
+    ),
+    'pdfpreview_description' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Description'),
+        '#description' => t('Show file description beside image'),
+        '#options' => array(0 => t('No'), 1 => t('Yes')),
+        '#default_value' => variable_get('pdfpreview_description', PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION),
+    ),
+    'pdfpreview_tag' => array(
+        '#type' => 'radios',
+        '#title' => t('HTML tag'),
+        '#description' => t('Select which kind of HTML element will be used to theme elements'),
+        '#options' => array('span' => 'span', 'div' => 'div'),
+        '#default_value' => variable_get('pdfpreview_tag', PDFPREVIEW_DEFAULT_TAG),
+    ),
+    'pdfpreview_filenames' => array(
+      '#type' => 'radios',
+      '#options' => array(PDFPREVIEW_FILENAMES_MACHINE => t('Filename hash'), PDFPREVIEW_FILENAMES_HUMAN => t('From pdf filename')),
+      '#default_value' => variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE),
+      '#title' => t('Generated filenames'),
+      '#description' => t('This changes how filenames will be used on genereated previews. If you change this after some files were generated, you must delete them manually.'),
+    ),
+);
 
   return system_settings_form($form);
+}
+
+function _pdfpreview_output_filename($file) {
+  if (!is_object($file)) $file = (object) $file;
+  $output_dir = file_directory_path() . '/' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
+  if (variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE) == PDFPREVIEW_FILENAMES_HUMAN) {
+    $filename = basename($file->filename, '.pdf');
+    if (module_exists('transliteration')) {
+      $filename = transliteration_clean_filename($filename);
+    }
+    return $output_dir . '/' . $file->fid . '-' . $filename . '.jpg';
+  }
+  else {
+    return $output_dir . '/' . md5($file->fid) .'.jpg';
+  }
+}
+
+
+/**
+ * Implements hook_file_delete()
+ */
+function pdfpreview_file_delete($file) {
+  file_delete(_pdfpreview_output_filename($file));
+}
+
+/**
+ * Implements hook_form_FORM_ID_validate()
+ */
+function pdfpreview_admin_settings_validate(&$form, &$form_state) {
+  if (!_pdfpreview_prepare_filesystem(file_directory_path() . '/' . $form_state['values']['pdfpreview_pathtoimages'])) {
+    form_set_error('pdfpreview_pathtoimages', t('Invalid path @path', array('@path' => $form_state['values']['pdfpreview_pathtoimages'])));
+  }
+}
+
+/**
+ * Prepares filesystem to store previews
+ */
+function _pdfpreview_prepare_filesystem($output_dir) {
+  $output_dir = _pdfpreview_realpath($output_dir);
+  if (!file_exists($output_dir)) {
+    if (!mkdir($output_dir)) {
+      drupal_set_message(t('Error creating directory %dir', array('%dir' => $output_dir)), 'error');
+      watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_dir), WATCHDOG_ERROR);
+      return FALSE;
+    }
+    $message = t('The directory %dir has been created', array('%dir' => $output_dir));
+    watchdog('pdfpreview', 'The directory %dir has been created', array('%dir' => $output_dir));
+    drupal_set_message($message, 'status');
+    return TRUE;
+  }
+  elseif (!is_dir($output_dir)) {
+    $message = t('The path %dir is not a directory', array('%dir' => $output_dir));
+    watchdog('pdfpreview', 'The path %dir is not a directory', array('%dir' => $output_dir), WATCHDOG_ERROR);
+    drupal_set_message($message, 'error');
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/**
+ * Convert the first page of a PDF document
+ *
+ * This function converts the first page of a PDF document using ImageMagick's
+ * convert executable and returns TRUE on success, FALSE else. You can provide
+ * optional parameters for the convert executable by simply passing them with
+ * in an array to the $args parameter. For details about convert arguments see
+ * the <a href="http://www.imagemagick.org/Usage/basics/#cmdline">ImageMagick
+ * documentation</a>.
+ *
+ * @param $source URI to the PDF file
+ * @param $dest URI where the preview file will be saved
+ * @param $args Optional arguments for the convert executable
+ * @see _imagemagick_convert()
+ * @see _pdfpreview_create_preview()
+ */
+function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
+  $source = _pdfpreview_realpath($source) . '[0]';
+  $dest = _pdfpreview_realpath($dest);
+
+  $args['quality'] = '-quality ' . escapeshellarg(variable_get('imagemagick_quality', PDFPREVIEW_DEFAULT_QUALITY));
+  $args['previewsize'] = '-resize ' . escapeshellarg(variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
+
+  $context = array(
+    'source' => $source,
+    'destination' => $dest,
+  );
+
+  drupal_alter('imagemagick_arguments', $args, $context);
+  // To make use of ImageMagick 6's parenthetical command grouping we need to make
+  // the $source image the first parameter and $dest the last.
+  // See http://www.imagemagick.org/Usage/basics/#cmdline
+  $command = escapeshellarg($source) . ' ' . implode(' ', $args) . ' ' . escapeshellarg($dest);
+  if (_imageapi_imagemagick_convert_exec($command, $output, $error) !== TRUE) {
+    return FALSE;
+  }
+  return file_exists($dest);
+}
+
+
+/**
+ * Creates the PDF preview file and returns its URI
+ *
+ * @param File $file
+ * @return string URI of the newly created preview image
+ * @see _pdfpreview_convert_first_page()
+ * @see pdfpreview_field_formatter_view()
+ */
+function _pdfpreview_create_preview($file) {
+  if (!is_array($file)) $file = (array) $file;
+  $output_filename = _pdfpreview_output_filename($file);
+  // Create preview image using ImageMagick
+  if (!file_exists($output_filename) && function_exists('_imageapi_imagemagick_convert_exec')) {
+    _pdfpreview_convert_first_page($file['filepath'], $output_filename);
+  }
+  return $output_filename;
+}
+
+function _pdfpreview_realpath($path) {
+  return $_SERVER['DOCUMENT_ROOT'] . base_path() . $path;
 }
