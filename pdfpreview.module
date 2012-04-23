@@ -135,6 +135,9 @@ function pdfpreview_theme() {
   return $theme;
 }
 
+/**
+ * Implements hook_file_delete()
+ */
 function pdfpreview_file_delete($file){
   file_unmanaged_delete(_pdfpreview_output_filename($file));
 }
@@ -284,8 +287,8 @@ function _pdfpreview_prepare_filesystem($form, &$form_state) {
 
   if (!file_exists($output_dir)) {
     if (!mkdir($output_dir)) {
-      drupal_set_message(t('Error creating directory @dir', array('%dir' => $output_dir)), 'error');
-      watchdog('pdfpreview', 'Error creating directory @dir', array('%dir' => $output_dir), WATCHDOG_ERROR);
+      drupal_set_message(t('Error creating directory %dir', array('%dir' => $output_dir)), 'error');
+      watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_dir), WATCHDOG_ERROR);
     }
     $message = t('The directory %dir has been created', array('%dir' => $output_dir));
     watchdog('pdfpreview', 'The directory %dir has been created', array('%dir' => $output_dir));
