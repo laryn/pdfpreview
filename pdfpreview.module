@@ -27,25 +27,47 @@ function pdfpreview_field_formatter_info() {
       'field types' => array('file'),
       'description' => 'Displays an snapshot of the first page of the PDF',
       'settings' => array(
-        'image_style' => '',
-        'image_link' => '',
         'show_description' => PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION,
         'tag' => PDFPREVIEW_DEFAULT_TAG,
         'fallback_formatter' => PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER
       ),
     ),
   );
+  if (module_exists('picture')) {
+    $formatters['pdfpreview_picture'] = $formatters['pdfpreview'];
+    $formatters['pdfpreview']['label'] = t('PDF Preview (Image)');
+    $formatters['pdfpreview_picture']['label'] = t('PDF Preview (Picture)');
+  }
   return $formatters;
 }
 
+/**
+ * Implements hook_field_formatter_info_alter().
+ */
+function pdfpreview_field_formatter_info_alter(&$info) {
+  $info['pdfpreview']['settings'] += $info['image']['settings'];
+  if (isset($info['picture'])) {
+    $info['pdfpreview_picture']['settings'] += $info['picture']['settings'];
+  }
+}
 
 /**
  * Implements hook_field_formatter_settings_form().
  */
 
 function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
-  //We want our user feel familiar with our settings, and reuse code.
-  $form = image_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state);
+  $form = array();
+  // Re-use image or picture formatter setting form.
+  switch ($instance['display'][$view_mode]['type']) {
+    case 'pdfpreview':
+      $form += image_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state);
+      break;
+
+    case 'pdfpreview_picture':
+      $form += picture_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state);
+      break;
+  }
+  // Add additional, PDF Preview only settings.
   $settings = $instance['display'][$view_mode]['settings'];
   $form['show_description'] = array(
     '#type' => 'checkbox',
@@ -76,42 +98,77 @@ function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode,
  * Implements hook_field_formatter_settings_summary().
  */
 function pdfpreview_field_formatter_settings_summary($field, $instance, $view_mode) {
-  //again, act like image module
-  $summary = image_field_formatter_settings_summary($field, $instance, $view_mode);
+  // Again, act like the image or picture module.
+  $summary = '';
+  switch ($instance['display'][$view_mode]['type']) {
+    case 'pdfpreview':
+      $summary .= image_field_formatter_settings_summary($field, $instance, $view_mode);
+      break;
+
+    case 'pdfpreview_picture':
+      $summary .= picture_field_formatter_settings_summary($field, $instance, $view_mode);
+      break;
+  }
   $summary .= '<br />' . t('Using %tag as separator', array('%tag' => $instance['display'][$view_mode]['settings']['tag']));
-  $summary .= '<br />' . t('Descriptions are %desc', array('%desc' => $instance['display'][$view_mode]['settings']['show_description'] ? t('visible') : t('hidden'))); 
+  $summary .= '<br />' . t('Descriptions are %desc', array('%desc' => $instance['display'][$view_mode]['settings']['show_description'] ? t('visible') : t('hidden')));
+  if (!isset($instance['display'][$view_mode]['settings']['fallback_formatter']) || $instance['display'][$view_mode]['settings']['fallback_formatter']) {
+    $summary .= '<br />' . t('Using the default file formatter for non-PDF file.');
+  }
   return $summary;
 }
 
 
 /**
- * Implements hook_field_formatter_view()
+ * Implements hook_field_formatter_view().
  *
  * @see _pdfpreview_create_preview()
  */
 function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
   $element = array();
   $settings = $display['settings'];
+  $image_items = array();
   $non_pdfs = array();
+  list($preview_width, $preview_height) = explode('x', variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
   foreach ($items as $delta => $item) {
     if (isset($item['display']) && !$item['display']) continue; //don't show hidden files
     if ($item['filemime'] == 'application/pdf') {
-      $item['preview'] = _pdfpreview_create_preview($item);
-      $element[$delta] = array(
-        '#preview' => $item['preview'],
-        '#markup' => theme($display['type'], array('item' => $item, 'instance' => $instance, 'settings' => $settings, 'entity_type' => $entity_type, 'entity' => $entity)),
+      $image_items[$delta] = array(
+        'fid' => $item['fid'],
+        'uri' => _pdfpreview_create_preview($item),
+        'alt' => isset($item['description']) ? $item['description'] : '',
+        'width' => $preview_width,
+        'height' => $preview_height,
+        'title' => isset($item['description']) ? $item['description'] : '',
+        'attributes' => array(
+          'class' => array('pdfpreview-file'),
+        )
       );
     }
     else {
-      //For non pdf files, we defer processing
+      //For non pdf files, we defer processing.
       $non_pdfs[$delta] = $item;
     }
   }
+  // Render PDF preview files using the image or picture formatter.
+  switch ($display['type']) {
+    case 'pdfpreview':
+      $element += image_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $image_items, $display);
+      break;
+
+    case 'pdfpreview_picture':
+      $element += picture_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $image_items, $display);
+      break;
+  }
+  foreach (element_children($element) as $delta) {
+    $element[$delta]['#theme_wrappers'][] = 'pdfpreview_formatter';
+    $element[$delta]['#settings'] = $settings;
+    $element[$delta]['#fid'] = $items[$delta]['fid'];
+  }
   if ((!isset($settings['fallback_formatter']) || $settings['fallback_formatter']) && !empty($non_pdfs)) {
-    //process non pdf files using default file formatter
+    // Process non PDF files using default file formatter.
     module_load_include('inc', 'file', 'file.field');
     $display['type'] = 'file_default';
-    $element = array_merge($element, file_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, array($item), $display));
+    $element = array_merge($element, file_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $non_pdfs, $display));
   }
   return $element;
 }
@@ -142,9 +199,9 @@ function pdfpreview_menu() {
  */
 function pdfpreview_theme() {
   $theme = array(
-    'pdfpreview' => array(
+    'pdfpreview_formatter' => array(
       'function' => 'theme_pdfpreview_formatter',
-      'variables' => array('element' => NULL),
+      'render element' => 'element',
     ),
   );
   return $theme;
@@ -292,7 +349,7 @@ function _pdfpreview_output_filename($file) {
  * This function is called after the module's setting form is submitted. It
  * checks whether the target directory for preview images exists. If this is not
  * the case, the directory will be created.
- *
+ *. '</div>';sss
  * @see _pdfpreview_admin_settings()
  * @see system_settings_form_submit()
  */
@@ -318,49 +375,31 @@ function _pdfpreview_prepare_filesystem($form, &$form_state) {
 
 
 /**
- * Theming functions for our formatters
+ * Default theme function to wrap a rendered PDF preview image.
  *
- * @todo Clearify the image cache thing...
- * @todo Let user choose what preview image to show on non-PDF files
+ * This function is used to wrap the rendered PDF preview image with a dedicated
+ * container element. If enabled, the description of the image is also appended.
+ *
+ * @param array $variables
+ *   A associative array containing:
+ *   - element: A rendered PDF file preview (using one of the image or picture
+ *     file formatter).
+ *
+ * @return string
+ *   A wrapped rendered PDF preview image.
  */
 function theme_pdfpreview_formatter($variables) {
-  $img_tag = '';
-  $item = $variables['item'];
-  
-  $image = array(
-    'title' => isset($item['description']) ? $item['description'] : '',
-    'uri' => $item['preview'],
-    'alt' => isset($item['description']) ? $item['description'] : '',
-  );
-
-  $element =array();
-  $element['item'] = $image;
-  $element['image_style'] = $variables['settings']['image_style'];
-  switch ($variables['settings']['image_link']) {
-    case 'file':
-      $element['path'] = array(
-        'path' => file_create_url($item['uri']),
-        'options' => array(),
-      );
-      break;
-      case 'content':
-      $element['path'] = array(
-        'path' => $variables['entity_type'] . '/' . $variables['entity']->nid,
-        'options' => array(),
-      );
-      break;
-  }
-  $img_tag = theme('image_formatter', $element);
-  $wrapper_tag = $variables['settings']['tag'];
-  $description = $variables['settings']['show_description'] ? '<' . $wrapper_tag . ' class="pdfpreview-description">' . $item['description'] . '</' . $wrapper_tag . '>' : '' ;
+  $element = $variables['element'];
+  $item = $element['#item'];
+  $wrapper_tag = $element['#settings']['tag'];
+  $description = ($element['#settings']['show_description'] && isset($item['description'])) ? '<' . $wrapper_tag . ' class="pdfpreview-description">' . $item['description'] . '</' . $wrapper_tag . '>' : '' ;
   return sprintf(
-          '<div class="pdfpreview pdfpreview-%s" id="pdfpreview-%s">'
-          . ' <%s class="pdfpreview-image-wrapper">%s</%s>'
-          . ' %s'
-          . '</div>',
-          $variables['instance']['field_name'],
-          $item['fid'],
-          $wrapper_tag, $img_tag, $wrapper_tag,
-          $description
+    '<div class="pdfpreview" id="pdfpreview-%s">'
+    . ' <%s class="pdfpreview-image-wrapper">%s</%s>'
+    . ' %s'
+    . '</div>',
+    $item['fid'],
+    $wrapper_tag, $element['#children'], $wrapper_tag,
+    $description
   );
 }
