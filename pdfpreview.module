@@ -281,30 +281,28 @@ function pdfpreview_admin() {
  * @see _pdfpreview_create_preview()
  */
 function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
-  $source = drupal_realpath($source) . '[0]';
-  $dest = drupal_realpath($dest);
-
   $args['alpha'] = '-alpha off';
   $args['quality'] = '-quality ' . escapeshellarg(variable_get('imagemagick_quality', PDFPREVIEW_DEFAULT_QUALITY));
   $args['previewsize'] = '-resize ' . escapeshellarg(variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
-
-  $context = array(
-    'source' => $source,
-    'destination' => $dest,
-  );
-
-  drupal_alter('imagemagick_arguments', $args, $context);
-  // To make use of ImageMagick 6's parenthetical command grouping we need to make
-  // the $source image the first parameter and $dest the last.
-  // See http://www.imagemagick.org/Usage/basics/#cmdline
-  $command = escapeshellarg($source) . ' ' . implode(' ', $args) . ' ' . escapeshellarg($dest);
-
-  if (_imagemagick_convert_exec($command, $output, $error) !== TRUE) {
+  $args['pdfpreview'] = TRUE;
+  $output_directory = dirname($dest);
+  if (file_prepare_directory($output_directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+    return _imagemagick_convert($source, $dest, $args);
+  }
+  else {
     return FALSE;
   }
-  return file_exists($dest);
 }
 
+/**
+ * Implements hook_imagemagick_arguments_alter().
+ */
+function pdfpreview_imagemagick_arguments_alter(&$args, &$context) {
+  if (!empty( $args['pdfpreview'])) {
+    $context['source'] .= '[0]';
+    unset($args['pdfpreview']);
+  }
+}
 
 /**
  * Creates the PDF preview file and returns its URI
@@ -350,27 +348,15 @@ function _pdfpreview_output_filename($file) {
  * This function is called after the module's setting form is submitted. It
  * checks whether the target directory for preview images exists. If this is not
  * the case, the directory will be created.
- *. '</div>';sss
+ *
  * @see _pdfpreview_admin_settings()
  * @see system_settings_form_submit()
  */
 function _pdfpreview_prepare_filesystem($form, &$form_state) {
   $output_uri = file_default_scheme() . '://' . $form['pdfpreview_pathtoimages']['#value'];
-  $output_dir = drupal_realpath($output_uri);
-
-  if (!file_exists($output_dir)) {
-    if (!mkdir($output_dir)) {
-      drupal_set_message(t('Error creating directory %dir', array('%dir' => $output_dir)), 'error');
-      watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_dir), WATCHDOG_ERROR);
-    }
-    $message = t('The directory %dir has been created', array('%dir' => $output_dir));
-    watchdog('pdfpreview', 'The directory %dir has been created', array('%dir' => $output_dir));
-    drupal_set_message($message, 'status');
-  }
-  elseif (!is_dir($output_dir)) {
-    $message = t('The path %dir is not a directory', array('%dir' => $output_dir));
-    watchdog('pdfpreview', 'The path %dir is not a directory', array('%dir' => $output_dir), WATCHDOG_ERROR);
-    drupal_set_message($message, 'error');
+  if (file_prepare_directory($output_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+    drupal_set_message(t('Error pepraring directory %dir', array('%dir' => $output_uri)), 'error');
+    watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_uri), WATCHDOG_ERROR);
   }
 }
 
