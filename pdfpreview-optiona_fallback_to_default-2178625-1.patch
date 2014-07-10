@@ -1,0 +1,90 @@
+From 8a4b684729c963d13ba86e707f7be8bbd9a3f507 Mon Sep 17 00:00:00 2001
+From: Pierre Buyle <buyle@pheromone.ca>
+Date: Wed, 22 Jan 2014 09:54:25 -0500
+Subject: [PATCH] Issue #2178625: Fallback to default file formatter should be
+ optional in pdfpreview_field_formatter_view().
+
+---
+ pdfpreview.module |   43 +++++++++++++++++++++++++++++--------------
+ 1 file changed, 29 insertions(+), 14 deletions(-)
+
+diff --git a/pdfpreview.module b/pdfpreview.module
+index 1af695c..139c081 100644
+--- a/pdfpreview.module
++++ b/pdfpreview.module
+@@ -14,6 +14,7 @@ define('PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION', 0);
+ define('PDFPREVIEW_DEFAULT_TAG', 'span');
+ define('PDFPREVIEW_FILENAMES_MACHINE', 0);
+ define('PDFPREVIEW_FILENAMES_HUMAN', 1);
++define('PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER', 'file_default');
+ 
+ /**
+  * Implements hook_field_formatter_info()
+@@ -25,7 +26,13 @@ function pdfpreview_field_formatter_info() {
+       'label' => t('PDF Preview'),
+       'field types' => array('file'),
+       'description' => 'Displays an snapshot of the first page of the PDF',
+-      'settings' => array('image_style' => '', 'image_link' => '', 'show_description' => PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION, 'tag' => PDFPREVIEW_DEFAULT_TAG),
++      'settings' => array(
++        'image_style' => '',
++        'image_link' => '',
++        'show_description' => PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION,
++        'tag' => PDFPREVIEW_DEFAULT_TAG,
++        'fallback_formatter' => PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER
++      ),
+     ),
+   );
+   return $formatters;
+@@ -39,20 +46,28 @@ function pdfpreview_field_formatter_info() {
+ function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+   //We want our user feel familiar with our settings, and reuse code.
+   $form = image_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state);
++  $settings = $instance['display'][$view_mode]['settings'];
+   $form['show_description'] = array(
+-          '#type' => 'checkbox',
+-          '#title' => t('Description'),
+-          '#description' => t('Show file description beside image'),
+-          '#options' => array(0 => t('No'), 1 => t('Yes')),
+-          '#default_value' => $instance['display'][$view_mode]['settings']['show_description'],
+-      );
++    '#type' => 'checkbox',
++    '#title' => t('Description'),
++    '#description' => t('Show file description beside image'),
++    '#options' => array(0 => t('No'), 1 => t('Yes')),
++    '#default_value' => $settings['show_description'],
++  );
+   $form['tag'] = array(
+-          '#type' => 'radios',
+-          '#title' => t('HTML tag'),
+-          '#description' => t('Select which kind of HTML element will be used to theme elements'),
+-          '#options' => array('span' => 'span', 'div' => 'div'),
+-          '#default_value' => $instance['display'][$view_mode]['settings']['tag'],
+-      );
++    '#type' => 'radios',
++    '#title' => t('HTML tag'),
++    '#description' => t('Select which kind of HTML element will be used to theme elements'),
++    '#options' => array('span' => 'span', 'div' => 'div'),
++    '#default_value' => $settings['tag'],
++  );
++  $form['fallback_formatter'] = array(
++    '#type' => 'checkbox',
++    '#title' => t('Fallback to default file formatter'),
++    '#description' => t('When enabled, non-PDF filed will be formatted using a default file formatter.'),
++    '#default_value' => isset($settings['fallback_formatter']) ? (boolean) $settings['fallback_formatter'] : TRUE,
++    '#return_value' => PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER,
++  );
+   return $form;
+ }
+ 
+@@ -92,7 +107,7 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
+       $non_pdfs[$delta] = $item;
+     }
+   }
+-  if (!empty($non_pdfs)) {
++  if ((!isset($settings['fallback_formatter']) || $settings['fallback_formatter']) && !empty($non_pdfs)) {
+     //process non pdf files using default file formatter
+     module_load_include('inc', 'file', 'file.field');
+     $display['type'] = 'file_default';
+-- 
+1.7.10.4
+
