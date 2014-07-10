@@ -216,6 +216,15 @@ function pdfpreview_file_delete($file){
   file_unmanaged_delete(_pdfpreview_output_filename($file));
 }
 
+/**
+ * Implements hook_file_update()
+ */
+function pdfpreview_file_update($file) {
+  if (($file->uri != $file->original->uri) || ($file->filesize != $file->original->filesize)) {
+    file_unmanaged_delete(_pdfpreview_output_filename($file->original));
+  }
+}
+
 // ----- custom module functions ----- //
 
 
