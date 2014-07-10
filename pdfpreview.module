@@ -125,7 +125,7 @@ function pdfpreview_menu() {
     'admin/config/media/pdfpreview' => array(
       'title' => 'PDF Preview',
       'description' => 'Configure PDF Preview settings',
-      'access arguments' => array('administer content'),
+      'access arguments' => array('administer site configuration'),
       'page callback' => 'drupal_get_form',
       'page arguments' => array('pdfpreview_admin'),
       'type' => MENU_NORMAL_ITEM,
