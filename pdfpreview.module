@@ -212,6 +212,7 @@ function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
   $source = drupal_realpath($source) . '[0]';
   $dest = drupal_realpath($dest);
 
+  $args['alpha'] = '-alpha off';
   $args['quality'] = '-quality ' . escapeshellarg(variable_get('imagemagick_quality', PDFPREVIEW_DEFAULT_QUALITY));
   $args['previewsize'] = '-resize ' . escapeshellarg(variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
 
