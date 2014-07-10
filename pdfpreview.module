@@ -241,15 +241,6 @@ function pdfpreview_admin() {
           '#description' => t('Size of the preview in pixels. For example <em>100x100</em>. You must set this to a value big enought to apply your image styles.'),
           '#default_value' => variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE),
       ),
-      'pdfpreview_quality' => array(
-          '#type' => 'textfield',
-          '#size' => 3,
-          '#maxlenght' => 3,
-          '#title' => t('Image quality'),
-          '#field_suffix' => '%',
-          '#description' => t('Image extraction quality in percentage.'),
-          '#default_value' => variable_get('pdfpreview_quality', PDFPREVIEW_DEFAULT_QUALITY),
-      ),
       'pdfpreview_filenames' => array(
         '#type' => 'radios',
         '#options' => array(PDFPREVIEW_FILENAMES_MACHINE => t('Filename hash'), PDFPREVIEW_FILENAMES_HUMAN => t('From pdf filename')),
