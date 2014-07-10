@@ -79,7 +79,7 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
   $settings = $display['settings'];
   $non_pdfs = array();
   foreach ($items as $delta => $item) {
-    if (empty($item['display'])) continue; //don't show hidden files
+    if (isset($item['display']) && !$item['display']) continue; //don't show hidden files
     if ($item['filemime'] == 'application/pdf') {
       $item['preview'] = _pdfpreview_create_preview($item);
       $element[$delta] = array(
@@ -314,9 +314,9 @@ function theme_pdfpreview_formatter($variables) {
   $item = $variables['item'];
   
   $image = array(
-    'title' => $item['description'],
+    'title' => isset($item['description']) ? $item['description'] : '',
     'uri' => $item['preview'],
-  'alt' => $item['description'],
+    'alt' => isset($item['description']) ? $item['description'] : '',
   );
 
   $element =array();
