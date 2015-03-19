@@ -158,7 +158,9 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
       break;
 
     case 'pdfpreview_picture':
-      $element += picture_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $image_items, $display);
+      $picture_display = array_merge(array(), $display);
+      $picture_display['type'] = 'picture';
+      $element += picture_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $image_items, $picture_display);
       break;
   }
   foreach (element_children($element) as $delta) {
