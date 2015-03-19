@@ -385,7 +385,7 @@ function _pdfpreview_output_filename($file) {
  */
 function _pdfpreview_prepare_filesystem($form, &$form_state) {
   $output_uri = file_default_scheme() . '://' . $form['pdfpreview_pathtoimages']['#value'];
-  if (file_prepare_directory($output_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+  if (!file_prepare_directory($output_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
     drupal_set_message(t('Error pepraring directory %dir', array('%dir' => $output_uri)), 'error');
     watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_uri), WATCHDOG_ERROR);
   }
