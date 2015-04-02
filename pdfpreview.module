@@ -66,6 +66,7 @@ function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode,
       break;
 
     case 'pdfpreview_picture':
+      $instance['display'][$view_mode]['type'] = 'picture';
       $form += picture_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state);
       break;
   }
@@ -108,6 +109,7 @@ function pdfpreview_field_formatter_settings_summary($field, $instance, $view_mo
       break;
 
     case 'pdfpreview_picture':
+      $instance['display'][$view_mode]['type'] = 'picture';
       $summary .= picture_field_formatter_settings_summary($field, $instance, $view_mode);
       break;
   }
@@ -369,7 +371,7 @@ function _pdfpreview_output_filename($file) {
     return $output_dir . '/' . $file->fid . '-' .  $filename . '.jpg';
   }
   else {
-    return $output_dir . '/' . md5('pdfpreview' . $file->fid) . '.jpg';  
+    return $output_dir . '/' . md5('pdfpreview' . $file->fid) . '.jpg';
   }
 }
 
