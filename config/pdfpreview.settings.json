@@ -1,0 +1,7 @@
+{
+    "_config_name": "pdfpreview.settings",
+    "pdfpreview_previewsize": "PDFPREVIEW_DEFAULT_SIZE",
+    "pdfpreview_pathtoimages": "pdfpreview",
+    "pdfpreview_quality": "PDFPREVIEW_DEFAULT_QUALITY",
+    "pdfpreview_filenames": "PDFPREVIEW_FILENAMES_MACHINE"
+}

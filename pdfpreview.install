@@ -9,15 +9,40 @@
  * Implements hook_uninstall().
  */
 function pdfpreview_uninstall() {
-  variable_del('pdfpreview_pathtoimages');
-  variable_del('pdfpreview_previewsize');
-  variable_del('pdfpreview_quality');
-  variable_del('pdfpreview_filenames');
+  config_clear('pdfpreview.settings', 'pdfpreview_pathtoimages');
+  config_clear('pdfpreview.settings', 'pdfpreview_previewsize');
+  config_clear('pdfpreview.settings', 'pdfpreview_quality');
+  config_clear('pdfpreview.settings', 'pdfpreview_filenames');
+}
+
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function pdfpreview_update_7001() { }
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function pdfpreview_update_last_removed() {
+  return;
 }
 
 /**
- * Delete unused configuration variable.
+ * Implements hook_update_N().
  */
-function pdfpreview_update_7001() {
-  variable_del('pdfpreview_quality');
+function pdfpreview_update_1000() {
+  $config = config('pdfpreview.settings');
+  $config->set('pdfpreview_previewsize', update_variable_get('pdfpreview_previewsize', 'PDFPREVIEW_DEFAULT_SIZE'));
+  $config->set('pdfpreview_pathtoimages', update_variable_get('pdfpreview_pathtoimages', 'pdfpreview'));
+  $config->set('pdfpreview_quality', update_variable_get('pdfpreview_quality', 'PDFPREVIEW_DEFAULT_QUALITY'));
+  $config->set('pdfpreview_filenames', update_variable_get('pdfpreview_filenames', 'PDFPREVIEW_FILENAMES_MACHINE'));
+  update_variable_del('pdfpreview_previewsize');
+  update_variable_del('pdfpreview_pathtoimages');
+  update_variable_del('pdfpreview_quality');
+  update_variable_del('pdfpreview_filenames');
+}
+
+/**
+ * Implements hook_install().
+ */
+function pdfpreview_install() {
+  // Dynamically generated variable data was detected.
 }

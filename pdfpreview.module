@@ -17,7 +17,7 @@ define('PDFPREVIEW_FILENAMES_HUMAN', 1);
 define('PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER', 'file_default');
 
 /**
- * Implements hook_field_formatter_info()
+ * Implements hook_field_formatter_info().
  *
  */
 function pdfpreview_field_formatter_info() {
@@ -31,7 +31,7 @@ function pdfpreview_field_formatter_info() {
         'image_link' => '',
         'show_description' => PDFPREVIEW_DEFAULT_SHOW_DESCRIPTION,
         'tag' => PDFPREVIEW_DEFAULT_TAG,
-        'fallback_formatter' => PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER
+        'fallback_formatter' => PDFPREVIEW_DEFAULT_FALLBACK_FORMATTER,
       ),
     ),
   );
@@ -57,6 +57,10 @@ function pdfpreview_field_formatter_info_alter(&$info) {
  * Implements hook_field_formatter_settings_form().
  */
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
   $form = array();
   // Re-use image or picture formatter setting form.
@@ -76,14 +80,20 @@ function pdfpreview_field_formatter_settings_form($field, $instance, $view_mode,
     '#type' => 'checkbox',
     '#title' => t('Description'),
     '#description' => t('Show file description beside image'),
-    '#options' => array(0 => t('No'), 1 => t('Yes')),
+    '#options' => array(
+      0 => t('No'),
+      1 => t('Yes'),
+    ),
     '#default_value' => $settings['show_description'],
   );
   $form['tag'] = array(
     '#type' => 'radios',
     '#title' => t('HTML tag'),
     '#description' => t('Select which kind of HTML element will be used to theme elements'),
-    '#options' => array('span' => 'span', 'div' => 'div'),
+    '#options' => array(
+      'span' => 'span',
+      'div' => 'div',
+    ),
     '#default_value' => $settings['tag'],
   );
   $form['fallback_formatter'] = array(
@@ -123,7 +133,17 @@ function pdfpreview_field_formatter_settings_summary($field, $instance, $view_mo
 
 
 /**
- * Implements hook_field_formatter_view()
+ * Implements hook_config_info().
+ */
+function pdfpreview_config_info() {
+  $prefixes['pdfpreview.settings'] = array(
+    'label' => t('Module name settings'),
+    'group' => t('Configuration'),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
  *
  * @see _pdfpreview_create_preview()
  */
@@ -132,9 +152,11 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
   $settings = $display['settings'];
   $image_items = array();
   $non_pdfs = array();
-  list($preview_width, $preview_height) = explode('x', variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
+  list($preview_width, $preview_height) = explode('x', config_get('pdfpreview.settings', 'pdfpreview_previewsize'));
   foreach ($items as $delta => $item) {
-    if (isset($item['display']) && !$item['display']) continue; //don't show hidden files
+    if (isset($item['display']) && !$item['display']) {
+      continue; //don't show hidden files
+    }
     if (($item['filemime'] == 'application/pdf') && ($preview_uri = _pdfpreview_create_preview($item))) {
       $image_items[$delta] = array(
         'fid' => $item['fid'],
@@ -145,7 +167,7 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
         'title' => isset($item['description']) ? $item['description'] : '',
         'attributes' => array(
           'class' => array('pdfpreview-file'),
-        )
+        ),
       );
     }
     else {
@@ -181,7 +203,7 @@ function pdfpreview_field_formatter_view($entity_type, $entity, $field, $instanc
 
 
 /**
- * Implements hook_menu()
+ * Implements hook_menu().
  */
 function pdfpreview_menu() {
   $items = array(
@@ -189,7 +211,7 @@ function pdfpreview_menu() {
       'title' => 'PDF Preview',
       'description' => 'Configure PDF Preview settings',
       'access arguments' => array('administer site configuration'),
-      'page callback' => 'drupal_get_form',
+      'page callback' => 'backdrop_get_form',
       'page arguments' => array('pdfpreview_admin'),
       'type' => MENU_NORMAL_ITEM,
     ),
@@ -214,14 +236,14 @@ function pdfpreview_theme() {
 }
 
 /**
- * Implements hook_file_delete()
+ * Implements hook_file_delete().
  */
-function pdfpreview_file_delete($file){
+function pdfpreview_file_delete($file) {
   file_unmanaged_delete(_pdfpreview_output_filename($file));
 }
 
 /**
- * Implements hook_file_update()
+ * Implements hook_file_update().
  */
 function pdfpreview_file_update($file) {
   if (($file->uri != $file->original->uri) || ($file->filesize != $file->original->filesize)) {
@@ -241,35 +263,40 @@ function pdfpreview_file_update($file) {
  *
  */
 function pdfpreview_admin() {
+  $config = config('pdfpreview.settings');
+  $form['#config'] = 'pdfpreview.settings';
   $form = array(
-      'pdfpreview_pathtoimages' => array(
-          '#type' => 'textfield',
-          '#title' => t('Images folder'),
-          '#description' => t('Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>'),
-          '#default_value' => variable_get('pdfpreview_pathtoimages', 'pdfpreview'),
+    'pdfpreview_pathtoimages' => array(
+      '#type' => 'textfield',
+      '#title' => t('Images folder'),
+      '#description' => t('Path, inside files directory, where snapshots are stored. For example <em>pdfpreview</em>'),
+      '#default_value' => $config->get('pdfpreview_pathtoimages'),
+    ),
+    'pdfpreview_previewsize' => array(
+      '#type' => 'textfield',
+      '#title' => t('Preview size'),
+      '#description' => t('Size of the preview in pixels. For example <em>100x100</em>. You must set this to a value big enought to apply your image styles.'),
+      '#default_value' => $config->get('pdfpreview_previewsize'),
+    ),
+    'pdfpreview_quality' => array(
+      '#type' => 'textfield',
+      '#size' => 3,
+      '#maxlenght' => 3,
+      '#title' => t('Image quality'),
+      '#field_suffix' => '%',
+      '#description' => t('Image extraction quality in percentage.'),
+      '#default_value' => $config->get('pdfpreview_quality'),
+    ),
+    'pdfpreview_filenames' => array(
+      '#type' => 'radios',
+      '#options' => array(
+        PDFPREVIEW_FILENAMES_MACHINE => t('Filename hash'),
+        PDFPREVIEW_FILENAMES_HUMAN => t('From pdf filename'),
       ),
-      'pdfpreview_previewsize' => array(
-          '#type' => 'textfield',
-          '#title' => t('Preview size'),
-          '#description' => t('Size of the preview in pixels. For example <em>100x100</em>. You must set this to a value big enought to apply your image styles.'),
-          '#default_value' => variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE),
-      ),
-      'pdfpreview_quality' => array(
-          '#type' => 'textfield',
-          '#size' => 3,
-          '#maxlenght' => 3,
-          '#title' => t('Image quality'),
-          '#field_suffix' => '%',
-          '#description' => t('Image extraction quality in percentage.'),
-          '#default_value' => variable_get('pdfpreview_quality', PDFPREVIEW_DEFAULT_QUALITY),
-      ),
-      'pdfpreview_filenames' => array(
-        '#type' => 'radios',
-        '#options' => array(PDFPREVIEW_FILENAMES_MACHINE => t('Filename hash'), PDFPREVIEW_FILENAMES_HUMAN => t('From pdf filename')),
-        '#default_value' => variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE),
-        '#title' => t('Generated filenames'),
-        '#description' => t('This changes how filenames will be used on genereated previews. If you change this after some files were generated, you must delete them manually.'),
-      ),
+      '#default_value' => $config->get('pdfpreview_filenames'),
+      '#title' => t('Generated filenames'),
+      '#description' => t('This changes how filenames will be used on genereated previews. If you change this after some files were generated, you must delete them manually.'),
+    ),
   );
 
   // Callback function which checks for existing preview directory on save
@@ -298,7 +325,7 @@ function pdfpreview_admin() {
 function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
   $args['background'] = '-background white';
   $args['flatten'] = '-flatten';
-  $args['previewsize'] = '-resize ' . escapeshellarg(variable_get('pdfpreview_previewsize', PDFPREVIEW_DEFAULT_SIZE));
+  $args['previewsize'] = '-resize ' . escapeshellarg(config_get('pdfpreview.settings', 'pdfpreview_previewsize'));
   $args['pdfpreview'] = TRUE;
   $output_directory = dirname($dest);
   if (file_prepare_directory($output_directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
@@ -315,7 +342,7 @@ function _pdfpreview_convert_first_page($source, $dest, $args = array()) {
 function pdfpreview_imagemagick_arguments_alter(&$args, &$context) {
   if (!empty( $args['pdfpreview'])) {
     $context['source'] .= '[0]';
-    $args['quality'] = '-quality ' . escapeshellarg(variable_get('pdfpreview_quality', PDFPREVIEW_DEFAULT_QUALITY));
+    $args['quality'] = '-quality ' . escapeshellarg(config_get('pdfpreview.settings', 'pdfpreview_quality'));
     unset($args['pdfpreview']);
   }
 }
@@ -324,7 +351,7 @@ function pdfpreview_imagemagick_arguments_alter(&$args, &$context) {
  * Creates the PDF preview file and returns its URI.
  *
  * @param object|array $file
- *   A Drupal file structure (array or object).
+ *   A Backdrop file structure (array or object).
  * @return string
  *   The URI of the newly created preview image, or NULL if the preview image can not be created.
  *
@@ -332,7 +359,9 @@ function pdfpreview_imagemagick_arguments_alter(&$args, &$context) {
  * @see pdfpreview_field_formatter_view()
  */
 function _pdfpreview_create_preview($file) {
-  if (!is_array($file)) $file = (array) $file;
+  if (!is_array($file)) {
+    $file = (array) $file;
+  }
   $output_filename = _pdfpreview_output_filename($file);
   // Check if a preview already exists.
   if (file_exists($output_filename)) {
@@ -348,7 +377,7 @@ function _pdfpreview_create_preview($file) {
       image_path_flush($output_filename);
     }
   }
-  if(_pdfpreview_convert_first_page($file['uri'], $output_filename)) {
+  if (_pdfpreview_convert_first_page($file['uri'], $output_filename)) {
     return $output_filename;
   }
   else {
@@ -362,9 +391,12 @@ function _pdfpreview_create_preview($file) {
  * @return Filename for the generated preview
  */
 function _pdfpreview_output_filename($file) {
-  if (!is_object($file)) $file = (object) $file;
-  $output_dir = file_default_scheme() . '://' . variable_get('pdfpreview_pathtoimages', 'pdfpreview');
-  if (variable_get('pdfpreview_filenames', PDFPREVIEW_FILENAMES_MACHINE) == PDFPREVIEW_FILENAMES_HUMAN) {
+  $config = config('pdfpreview.settings');
+  if (!is_object($file)) {
+    $file = (object) $file;
+  }
+  $output_dir = file_default_scheme() . '://' . $config->get('pdfpreview_pathtoimages');
+  if ($config->get('pdfpreview_filenames') == PDFPREVIEW_FILENAMES_HUMAN) {
     $filename = basename($file->filename, '.pdf');
     if (module_exists('transliteration')) {
       $filename = transliteration_clean_filename($filename);
@@ -389,7 +421,7 @@ function _pdfpreview_output_filename($file) {
 function _pdfpreview_prepare_filesystem($form, &$form_state) {
   $output_uri = file_default_scheme() . '://' . $form['pdfpreview_pathtoimages']['#value'];
   if (!file_prepare_directory($output_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
-    drupal_set_message(t('Error pepraring directory %dir', array('%dir' => $output_uri)), 'error');
+    backdrop_set_message(t('Error pepraring directory %dir', array('%dir' => $output_uri)), 'error');
     watchdog('pdfpreview', 'Error creating directory %dir', array('%dir' => $output_uri), WATCHDOG_ERROR);
   }
 }
@@ -413,7 +445,7 @@ function theme_pdfpreview_formatter($variables) {
   $element = $variables['element'];
   $item = $element['#item'];
   $wrapper_tag = $element['#settings']['tag'];
-  $description = ($element['#settings']['show_description'] && isset($item['description'])) ? '<' . $wrapper_tag . ' class="pdfpreview-description">' . $item['description'] . '</' . $wrapper_tag . '>' : '' ;
+  $description = ($element['#settings']['show_description'] && isset($item['description'])) ? '<' . $wrapper_tag . ' class="pdfpreview-description">' . $item['description'] . '</' . $wrapper_tag . '>' : '';
   return sprintf(
     '<div class="pdfpreview" id="pdfpreview-%s">'
     . ' <%s class="pdfpreview-image-wrapper">%s</%s>'
